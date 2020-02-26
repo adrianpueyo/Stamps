@@ -2,8 +2,8 @@
 # Stamps by Adrian Pueyo and Alexey Kuchinski
 # Smart node connection system for Nuke
 # adrianpueyo.com, 2018-2019
-version= "v1.0"
-date = "Sep 27 2019"
+version= "v1.1wip"
+date = "Feb 24 2020"
 #-----------------------------------------------------
 
 # Constants
@@ -44,6 +44,8 @@ import nuke
 import nukescripts
 import re
 from functools import partial
+import sys
+import os
 
 # PySide import switch
 try:
@@ -912,17 +914,19 @@ def getAvailableName(name = "Untitled", rand=False):
 
 class AnchorSelector(QtWidgets.QDialog):
     '''
-    Panel to select an anchor, showing the different anchors on dropdowns based on their tags.
+    Panel to select one or more anchors, showing the different anchors on dropdowns based on their tags.
     '''
 
     # TODO LATER:
     # - Have three columns, distinguished, like an asset loader. Maybe even with border color?
     # - Button to activate the "Multiple" mode (off by default) which will not close it on clicking "OK"
-    # - Ability to show and hide backdrops (would turn off their visibility or "bookmark")
+    # - Ability to show and hide backdrops (would turn off their visibility or "bookmark"):
+    #    - Checkbox named "show backdrops" maybe that gets saved in nuke root. If you want it permanent you can save it inside stamps_config.
 
     def __init__(self):
         super(AnchorSelector, self).__init__()
         self.setWindowTitle("Stamps: Select an Anchor.")
+        self.chosen_anchors = []
         self.initUI()
         #self.setFixedSize(self.sizeHint())
         #self.setFixedWidth(self.sizeHint()[0])
@@ -936,7 +940,7 @@ class AnchorSelector(QtWidgets.QDialog):
         # Header
         self.headerTitle = QtWidgets.QLabel("Anchor Stamp Selector")
         self.headerTitle.setStyleSheet("font-weight:bold;color:#CCCCCC;font-size:14px;")
-        self.headerSubtitle = QtWidgets.QLabel("Select an Anchor to make a Stamp for.")
+        self.headerSubtitle = QtWidgets.QLabel("Select an Anchor to make a Stamp for.<br/><b><small style='color:#CCC'>Right click on the OK buttons for multiple selection.</small></b>")
         self.headerSubtitle.setStyleSheet("color:#999")
 
         self.headerLine = QtWidgets.QFrame()
@@ -965,6 +969,7 @@ class AnchorSelector(QtWidgets.QDialog):
         self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.scroll.setWidgetResizable(True)
         self.scroll.setWidget(self.scroll_content)
+        self.scroll.setFrameStyle(QtWidgets.QFrame.Panel | QtWidgets.QFrame.Sunken)
 
         self.grid = QtWidgets.QGridLayout()
         #self.grid.setSpacing(0)
@@ -1012,6 +1017,7 @@ class AnchorSelector(QtWidgets.QDialog):
             tag_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
 
             anchors_dropdown = QtWidgets.QComboBox()
+            anchors_dropdown.setMinimumWidth(200)
             for i, cur_name in enumerate(self._all_anchors_names):
                 cur_title = self._all_anchors_titles[i]
                 title_repeated = self.titleRepeatedForTag(cur_title, tag, mode)
@@ -1033,6 +1039,11 @@ class AnchorSelector(QtWidgets.QDialog):
 
             ok_btn = QtWidgets.QPushButton("OK")
             ok_btn.clicked.connect(partial(self.okPressed,dropdown=anchors_dropdown))
+
+            ok_btn.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+            ok_btn.setMaximumWidth(ok_btn.sizeHint().width()-19)
+            ok_btn.customContextMenuRequested.connect(partial(self.okRightClicked,anchors_dropdown))
+
 
             self.grid.addWidget(tag_label,tag_num*10+1,0)
             self.grid.addWidget(anchors_dropdown,tag_num*10+1,1)
@@ -1061,6 +1072,10 @@ class AnchorSelector(QtWidgets.QDialog):
 
         all_ok_btn = QtWidgets.QPushButton("OK")
         all_ok_btn.clicked.connect(partial(self.okPressed,dropdown=self.all_anchors_dropdown))
+
+        all_ok_btn.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        all_ok_btn.customContextMenuRequested.connect(partial(self.okRightClicked,self.all_anchors_dropdown))
+
         self.lower_grid.addWidget(all_tag_label,tag_num,0)
         self.lower_grid.addWidget(self.all_anchors_dropdown,tag_num,1)
         self.lower_grid.addWidget(all_ok_btn,tag_num,2)
@@ -1076,8 +1091,10 @@ class AnchorSelector(QtWidgets.QDialog):
         all_tag_count = [stampCount(i) for i in self._all_anchors_names] # Number of stamps for each anchor!
 
         popular_tag_texts = [] # List of popular texts of the items (usually equals the "title (x2)", or "title (name) (x2)")
-        popular_anchors_names = [x for _,x in sorted(zip(all_tag_count,self._all_anchors_names),reverse=True)]
-        popular_anchors_titles = [x for _,x in sorted(zip(all_tag_count,self._all_anchors_titles),reverse=True)]
+        sorted_names_and_titles = [(x,y) for (_,x,y) in sorted(zip(all_tag_count,self._all_anchors_names,self._all_anchors_titles),reverse=True)]
+        popular_anchors_names = [x for x,_ in sorted_names_and_titles]
+        popular_anchors_titles = [x for _,x in sorted_names_and_titles]
+        #popular_anchors_titles = [x for _,x in sorted(zip(all_tag_count,self._all_anchors_titles),reverse=True)]
         popular_anchors_count = sorted(all_tag_count,reverse=True)
 
         for i, cur_name in enumerate(popular_anchors_names):
@@ -1093,6 +1110,10 @@ class AnchorSelector(QtWidgets.QDialog):
 
         popular_ok_btn = QtWidgets.QPushButton("OK")
         popular_ok_btn.clicked.connect(partial(self.okPressed,dropdown=self.popular_anchors_dropdown))
+
+        popular_ok_btn.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        popular_ok_btn.customContextMenuRequested.connect(partial(self.okRightClicked,self.popular_anchors_dropdown))
+
         self.lower_grid.addWidget(popular_tag_label,tag_num,0)
         self.lower_grid.addWidget(self.popular_anchors_dropdown,tag_num,1)
         self.lower_grid.addWidget(popular_ok_btn,tag_num,2)
@@ -1116,9 +1137,19 @@ class AnchorSelector(QtWidgets.QDialog):
 
         custom_ok_btn = QtWidgets.QPushButton("OK")
         custom_ok_btn.clicked.connect(partial(self.okCustomPressed,dropdown=self.custom_anchors_lineEdit))
+
+        custom_ok_btn.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        custom_ok_btn.customContextMenuRequested.connect(partial(self.okCustomRightClicked,self.custom_anchors_lineEdit))
+
         self.lower_grid.addWidget(custom_tag_label,tag_num,0)
         self.lower_grid.addWidget(self.custom_anchors_lineEdit,tag_num,1)
         self.lower_grid.addWidget(custom_ok_btn,tag_num,2)
+
+        for i in [self.all_anchors_dropdown,self.popular_anchors_dropdown]:
+            i.setSizeAdjustPolicy(QtWidgets.QComboBox.SizeAdjustPolicy.AdjustToContentsOnFirstShow)
+            i.setMinimumWidth(200)
+            i.resize(500,i.sizeHint().height())
+            i.setSizePolicy(QtWidgets.QSizePolicy.Ignored,i.sizePolicy().verticalPolicy())
 
         # Layout shit
         self.grid.setColumnStretch(1,1)
@@ -1129,7 +1160,7 @@ class AnchorSelector(QtWidgets.QDialog):
         self.master_layout.addLayout(self.lower_grid)
         self.setLayout(self.master_layout)
         self.resize(self.sizeHint().width(),min(self.sizeHint().height()+10,700))
-        self.setFixedWidth(self.sizeHint().width()+40)
+        #self.setFixedWidth(self.sizeHint().width()+40)
 
     def keyPressEvent(self, e):
         selectorType = type(self.focusWidget()).__name__ #QComboBox or QLineEdit
@@ -1214,7 +1245,7 @@ class AnchorSelector(QtWidgets.QDialog):
         title_repetitions = titles_with_tag.count(title)
         return (title_repetitions > 1)
 
-    def okPressed(self, dropdown):
+    def okPressed(self, dropdown, close=True):
         ''' Runs after an ok button is pressed '''
         dropdown_value = dropdown.currentText()
         dropdown_index = dropdown.currentIndex()
@@ -1228,12 +1259,16 @@ class AnchorSelector(QtWidgets.QDialog):
         self.chosen_value = dropdown_value
         self.chosen_anchor_name = dropdown_data
         if match_anchor is not None:
-            self.chosen_anchor = match_anchor
-            self.accept()
+            self.chosen_anchors.append(match_anchor)
+            if close:
+                self.accept()
         else:
             nuke.message("There was a problem selecting a valid anchor.")
 
-    def okCustomPressed(self, dropdown):
+    def okRightClicked(self, dropdown, position):
+        self.okPressed(dropdown,close=False)
+
+    def okCustomPressed(self, dropdown, close=True):
         ''' Runs after the custom ok button is pressed '''
         global Stamps_LastCreated
         written_value = dropdown.text() # This means it's been written down on the lineEdit
@@ -1259,10 +1294,14 @@ class AnchorSelector(QtWidgets.QDialog):
         self.chosen_value = written_value
         self.chosen_anchor_name = found_data
         if match_anchor is not None:
-            self.chosen_anchor = match_anchor
-            self.accept()
+            self.chosen_anchors.append(match_anchor)
+            if close:
+                self.accept()
         else:
             nuke.message("There was a problem selecting a valid anchor.")
+
+    def okCustomRightClicked(self, dropdown, position):
+        self.okCustomPressed(dropdown,close=False)
 
 class AnchorTags_LineEdit(QtWidgets.QLineEdit):
     new_text = QtCore.Signal(object, object)
@@ -1702,7 +1741,7 @@ def stampCreateAnchor(node = None, extra_tags = [], no_default_tag = False):
         
     return extra_tags
 
-def stampSelectAnchor():
+def stampSelectAnchors():
     '''
     Panel to select a stamp anchor (if there are any)
     Returns: selected anchor node, or None.
@@ -1717,23 +1756,31 @@ def stampSelectAnchor():
         nuke.message("Please create some stamps first...")
         return None
     else:
-        global select_anchor_panel
-        select_anchor_panel = AnchorSelector()
-        if select_anchor_panel.exec_(): # If user clicks OK
-            chosen_anchor = select_anchor_panel.chosen_anchor
-            if chosen_anchor:
-                return chosen_anchor
+        global select_anchors_panel
+        select_anchors_panel = AnchorSelector()
+        if select_anchors_panel.exec_(): # If user clicks OK
+            chosen_anchors = select_anchors_panel.chosen_anchors
+            if chosen_anchors:
+                return chosen_anchors
         return None
 
 def stampCreateWired(anchor = ""):
     ''' Create a wired stamp from an anchor node. '''
     global Stamps_LastCreated
+    nw = ""
+    nws = []
     if anchor == "":
-        anchor = stampSelectAnchor()
-        if anchor == None:
+        anchors = stampSelectAnchors()
+        if anchorSelectWireds == None:
             return
-        nw = wired(anchor = anchor)
-        nw.setInput(0,anchor)
+        if anchors:
+            for i, anchor in enumerate(anchors):
+                nw = wired(anchor = anchor)
+                nw.setInput(0,anchor)
+                nws.append(nw)
+                if i>0:
+                    nws[i].setXYpos(nws[i-1].xpos()+100,nws[i-1].ypos())
+
     else:
         ns = nuke.selectedNodes()
         for n in ns:
@@ -2013,6 +2060,23 @@ def allToNoOp():
         if stampType(n) and n.Class() != "NoOp":
             toNoOp(n)
 
+def createWHotboxButtons():
+    ''' If the folder is available inside the stamps package, it gets appended into the W_Hotbox packages. '''
+    # DONE W_Hotbox buttons imported from stamps extras path
+    w_hotbox_buttons_path = os.path.dirname(__file__).replace("\\","/")+"/extras/W_hotbox"
+    if os.path.exists(w_hotbox_buttons_path):
+        hotbox_paths = ""
+        hotbox_names = ""
+        if "W_HOTBOX_REPO_PATHS" in os.environ.keys() and "W_HOTBOX_REPO_NAMES" in os.environ.keys():
+            hotbox_paths = os.environ["W_HOTBOX_REPO_PATHS"]
+            hotbox_names = os.environ["W_HOTBOX_REPO_NAMES"]
+        if hotbox_paths != "":
+            hotbox_paths += os.pathsep
+        if hotbox_names != "":
+            hotbox_names += os.pathsep
+        os.environ["W_HOTBOX_REPO_PATHS"] = hotbox_paths + os.path.dirname(__file__).replace("\\","/")+"/extras/W_hotbox"
+        os.environ["W_HOTBOX_REPO_NAMES"] = hotbox_names + "Stamps"
+
 #################################
 ### Menu functions
 #################################
@@ -2235,6 +2299,8 @@ def stampBuildMenus():
         m.addCommand('Edit/Stamps/Video tutorials', 'stamps.showVideo()')
         m.addCommand('Edit/Stamps/Documentation (.pdf)', 'stamps.showHelp()')
         nuke.menu('Nodes').addCommand('Other/Stamps', 'stamps.goStamp()', STAMPS_SHORTCUT, icon="stamps.png")
+
+        createWHotboxButtons()
 
 #################################
 ### MAIN IMPLEMENTATION
