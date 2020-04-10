@@ -1,0 +1,1 @@
+from stamps import *
