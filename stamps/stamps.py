@@ -3,7 +3,7 @@
 # Smart node connection system for Nuke
 # adrianpueyo.com, 2018-2019
 version= "v1.1wip"
-date = "Feb 24 2020"
+date = "May 16 2020"
 #-----------------------------------------------------
 
 # Constants
@@ -219,6 +219,14 @@ def wiredKnobChanged():
         return
     elif kn == "inputChange":
         wiredGetStyle(n)
+    elif kn == "postage_stamp":
+        n["postageStamp_show"].setVisible(True)
+        n["postageStamp_show"].setValue(k.value())
+    elif kn == "postageStamp_show":
+        try:
+            n["postage_stamp"].setValue(k.value())
+        except:
+            n["postageStamp_show"].setVisible(False)
     elif kn == "title":
         kv = k.value()
         if titleIsLegal(kv):
@@ -781,6 +789,11 @@ def wired(anchor):
     tags_knob.setTooltip("Tags of this stamp's Anchor, for information purpose only.\nClick \"show anchor\" to change them.")
     backdrops_knob = nuke.Text_Knob('backdrops','Backdrops:', " ")
     backdrops_knob.setTooltip("Labels of backdrop nodes which contain this stamp's Anchor.")
+    postageStamp_knob = nuke.Boolean_Knob("postageStamp_show","postage stamp")
+    postageStamp_knob.setTooltip("Enable the postage stamp thumbnail in this node.\nYou're seeing this because the class of this node includes the postage_stamp knob.")
+    postageStamp_knob.setFlag(nuke.STARTLINE)
+    postageStamp_knob.setVisible("postage_stamp" in n.knobs() and nodeType(n) == "2D")
+
     anchor_knob = nuke.String_Knob('anchor','Anchor', anchor.name()) # This goes in the advanced part
 
     for k in [wiredTab_knob, identifier_knob, lock_knob, toReconnect_knob, title_knob, prev_title_knob, tags_knob, backdrops_knob]:
@@ -789,6 +802,7 @@ def wired(anchor):
     wiredTab_knob.setFlag(0) # Open the tab
 
     n.addKnob(nuke.Text_Knob("line1", "", "")) # Line
+    n.addKnob(postageStamp_knob)
 
     ### Buttons
 
