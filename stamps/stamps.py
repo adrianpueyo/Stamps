@@ -1,9 +1,9 @@
 #------------------------------------------------------
 # Stamps by Adrian Pueyo and Alexey Kuchinski
 # Smart node connection system for Nuke
-# adrianpueyo.com, 2018-2019
-version= "v1.1wip"
-date = "May 16 2020"
+# adrianpueyo.com, 2018-2020
+version= "v1.1a2"
+date = "May 17 2020"
 #-----------------------------------------------------
 
 # Constants
@@ -933,7 +933,6 @@ class AnchorSelector(QtWidgets.QDialog):
 
     # TODO LATER:
     # - Have three columns, distinguished, like an asset loader. Maybe even with border color?
-    # - Button to activate the "Multiple" mode (off by default) which will not close it on clicking "OK"
     # - Ability to show and hide backdrops (would turn off their visibility or "bookmark"):
     #    - Checkbox named "show backdrops" maybe that gets saved in nuke root. If you want it permanent you can save it inside stamps_config.
 

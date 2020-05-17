@@ -1,7 +1,7 @@
 #------------------------------------------------------
 # Stamps by Adrian Pueyo and Alexey Kuchinski
 # Smart node connection system for Nuke
-# adrianpueyo.com, 2018-2019
+# adrianpueyo.com, 2018-2020
 config_version= "v1.1"
 date = "May 16 2020"
 #-----------------------------------------------------
