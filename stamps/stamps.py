@@ -1,9 +1,9 @@
 #------------------------------------------------------
 # Stamps by Adrian Pueyo and Alexey Kuchinski
 # Smart node connection system for Nuke
-# adrianpueyo.com, 2018-2020
-version= "v1.1a2"
-date = "May 17 2020"
+# adrianpueyo.com, 2018-2021
+version= "v1.1"
+date = "Mar 21 2021"
 #-----------------------------------------------------
 
 # Constants
@@ -32,10 +32,10 @@ VERSION_TOOLTIP = "Stamps by Adrian Pueyo and Alexey Kuchinski.\nUpdated "+date+
 STAMPS_SHORTCUT = "F8"
 KEEP_ORIGINAL_TAGS = True
 
-if not globals().has_key('Stamps_LastCreated'):
+if 'Stamps_LastCreated' not in globals():
     Stamps_LastCreated = None
 
-if not globals().has_key('Stamps_MenusLoaded'):
+if 'Stamps_MenusLoaded' not in globals():
     Stamps_MenusLoaded = False
 
 Stamps_LockCallbacks = False
@@ -46,6 +46,9 @@ import re
 from functools import partial
 import sys
 import os
+
+if sys.version_info[0] >= 3:
+    unicode = str
 
 # PySide import switch
 try:
@@ -268,7 +271,7 @@ def wiredOnCreate():
     n = nuke.thisNode()
     n.knob("toReconnect").setValue(1)
     for k in n.allKnobs():
-        if k.name() not in ['wired_tab','identifier','lockCallbacks','toReconnect','title','prev_title','tags','backdrops','anchor','line1','anchor_label','show_anchor','zoom_anchor','stamps_label','zoomNext','selectSimilar','space_1','reconnect_label','reconnect_this','reconnect_similar','reconnect_all','space_2','advanced_reconnection','reconnect_by_title_label','reconnect_by_title_this','reconnect_by_title_similar', 'reconnect_by_title_selected', 'reconnect_by_selection_label','reconnect_by_selection_this','reconnect_by_selection_similar','reconnect_by_selection_selected','auto_reconnect_by_title','advanced_reconnection','line2','buttonHelp','version']:
+        if k.name() not in ['wired_tab','identifier','lockCallbacks','toReconnect','title','prev_title','tags','backdrops','anchor','line1','anchor_label','show_anchor','zoom_anchor','stamps_label','zoomNext','selectSimilar','space_1','reconnect_label','reconnect_this','reconnect_similar','reconnect_all','space_2','advanced_reconnection','reconnect_by_title_label','reconnect_by_title_this','reconnect_by_title_similar', 'reconnect_by_title_selected', 'reconnect_by_selection_label','reconnect_by_selection_this','reconnect_by_selection_similar','reconnect_by_selection_selected','auto_reconnect_by_title','advanced_reconnection','line2','buttonHelp','version','postageStamp_show']:
             k.setFlag(0x0000000000000400)
 
 def anchorKnobChanged():
@@ -1004,7 +1007,7 @@ class AnchorSelector(QtWidgets.QDialog):
         middleLine.setMidLineWidth(1)
         middleLine.setFrameShadow(QtWidgets.QFrame.Sunken)
 
-        if len(filter(None,self._all_tags))>0:
+        if len(list(filter(None,self._all_tags)))>0:
             tags_label = QtWidgets.QLabel("<i>Tags")
             tags_label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
             tags_label.setStyleSheet("color:#666;margin:0px;padding:0px;padding-left:3px")
@@ -1078,7 +1081,7 @@ class AnchorSelector(QtWidgets.QDialog):
                 all_tag_texts.append("{0} ({1})".format(cur_title, cur_name))
             else:
                 all_tag_texts.append(cur_title)
-        self.all_tag_sorted = sorted(zip(all_tag_texts,all_tag_names),  key=lambda pair: pair[0].lower())
+        self.all_tag_sorted = sorted(list(zip(all_tag_texts,all_tag_names)),  key=lambda pair: pair[0].lower())
 
         for [text, name] in self.all_tag_sorted:
             self.all_anchors_dropdown.addItem(text, name)
@@ -1104,7 +1107,7 @@ class AnchorSelector(QtWidgets.QDialog):
         all_tag_count = [stampCount(i) for i in self._all_anchors_names] # Number of stamps for each anchor!
 
         popular_tag_texts = [] # List of popular texts of the items (usually equals the "title (x2)", or "title (name) (x2)")
-        sorted_names_and_titles = [(x,y) for (_,x,y) in sorted(zip(all_tag_count,self._all_anchors_names,self._all_anchors_titles),reverse=True)]
+        sorted_names_and_titles = [(x,y) for (_,x,y) in sorted(list(zip(all_tag_count,self._all_anchors_names,self._all_anchors_titles)),reverse=True)]
         popular_anchors_names = [x for x,_ in sorted_names_and_titles]
         popular_anchors_titles = [x for _,x in sorted_names_and_titles]
         #popular_anchors_titles = [x for _,x in sorted(zip(all_tag_count,self._all_anchors_titles),reverse=True)]
@@ -1166,7 +1169,7 @@ class AnchorSelector(QtWidgets.QDialog):
 
         # Layout shit
         self.grid.setColumnStretch(1,1)
-        if len(filter(None,self._all_tags_and_backdrops)):
+        if len(list(filter(None,self._all_tags_and_backdrops))):
             self.master_layout.addWidget(self.scroll)
         else:
             self.master_layout.addWidget(self.headerLine)
@@ -1227,7 +1230,7 @@ class AnchorSelector(QtWidgets.QDialog):
 
         #titles_upper = [x.upper() for x in self._all_anchors_titles]
 
-        titles_and_names = zip(self._all_anchors_titles, self._all_anchors_names)
+        titles_and_names = list(zip(self._all_anchors_titles, self._all_anchors_names))
         titles_and_names.sort(key=lambda tup: tup[0].upper())
         self._all_anchors_titles = [x for x, y in titles_and_names]
         self._all_anchors_names = [y for x, y in titles_and_names]
@@ -1289,7 +1292,7 @@ class AnchorSelector(QtWidgets.QDialog):
 
         found_data = None
 
-        if written_value == "" and globals().has_key('Stamps_LastCreated'):
+        if written_value == "" and 'Stamps_LastCreated' in globals():
             found_data = Stamps_LastCreated
         else:
             for [text, name] in reversed(self.all_tag_sorted):
@@ -1724,7 +1727,7 @@ def stampCreateAnchor(node = None, extra_tags = [], no_default_tag = False):
     if no_default_tag:
         default_tags = ", ".join(extra_tags + [""])
     else:
-        default_tags = filter(None,list(dict.fromkeys(default_tags + extra_tags)))
+        default_tags = list(filter(None,list(dict.fromkeys(default_tags + extra_tags))))
         default_tags = ", ".join(default_tags + [""])
 
     global new_anchor_panel
@@ -1803,13 +1806,15 @@ def stampCreateWired(anchor = ""):
         dot.setInput(0,anchor)
         nw = wired(anchor = anchor)
         code = "dummy = nuke.nodes.{}()".format(nw.Class())
-        exec(code)
+        namespace = {}
+        exec(code,globals(),namespace)
+        dummy = namespace["dummy"]
         nww = dummy.screenWidth()
         nuke.delete(dummy)
         nuke.delete(dot)
         for n in ns:
             n.setSelected(True)
-        nw.setXYpos(anchor.xpos()+anchor.screenWidth()/2-nww/2 ,anchor.ypos()+56)
+        nw.setXYpos(int(anchor.xpos()+anchor.screenWidth()/2-nww/2) ,anchor.ypos()+56)
         anchor.setSelected(False)
     return nw
 
@@ -1909,7 +1914,7 @@ def allTags(selection=""):
         except:
             pass
 
-    all_tags = filter(None,list(all_tags))
+    all_tags = [i for i in list(all_tags) if i]
     all_tags.sort(key=str.lower)
     return all_tags
 
@@ -2039,7 +2044,7 @@ def toNoOp(node=""):
     for i, line in enumerate(scr_first):
         if not any([line.startswith(x) or line.startswith(" "+x) for x in legal_starts]):
             scr_first[i] = ""
-    scr_first = "\n".join(filter(None,scr_first)+[""])
+    scr_first = "\n".join([i for i in scr_first if i]+[""])
     scr_split[0] = scr_first
 
     scr = "addUserKnob".join(scr_split)
@@ -2157,7 +2162,7 @@ def addTags(ns=""):
             else:
                 continue
             existing_tags = re.split(r"[\s]*,[\s]*", tags_knob.value().strip())
-            merged_tags = filter(None,list(set(existing_tags + added_tags)))
+            merged_tags = list(filter(None,list(set(existing_tags + added_tags))))
             tags_knob.setValue(", ".join(merged_tags))
             i += 1
             continue
@@ -2199,7 +2204,7 @@ def renameTag(ns=""):
             else:
                 continue
 
-            existing_tags = filter(None,re.split(r"[\s]*,[\s]*", tags_knob.value()))
+            existing_tags = list(filter(None,re.split(r"[\s]*,[\s]*", tags_knob.value())))
             added_tag_list = re.split(r"[\s]*,[\s]*", added_tag.strip())
             added_tagReplace_list = re.split(r"[\s]*,[\s]*", added_tagReplace)
 
@@ -2208,7 +2213,7 @@ def renameTag(ns=""):
                 for rtag in added_tagReplace_list:
                     merged_tags = [rtag if x == atag else x for x in merged_tags]
 
-            merged_tags = filter(None,merged_tags)
+            merged_tags = [i for i in merged_tags if i]
 
             if merged_tags != existing_tags:
                 tags_knob.setValue(", ".join(merged_tags))
