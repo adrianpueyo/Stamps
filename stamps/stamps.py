@@ -3,7 +3,7 @@
 # Smart node connection system for Nuke
 # adrianpueyo.com, 2018-2021
 version= "v1.1"
-date = "Mar 21 2021"
+date = "May 17 2021"
 #-----------------------------------------------------
 
 # Constants
@@ -1362,7 +1362,7 @@ class TagsCompleter(QtWidgets.QCompleter):
 
     def update(self, text_tags, completion_prefix):
         tags = list(self.all_tags-set(text_tags))
-        model = QtGui.QStringListModel(tags, self)
+        model = QtCore.QStringListModel(tags, self)
         self.setModel(model)
         self.setCompletionPrefix(completion_prefix)
         self.complete()
@@ -2081,7 +2081,7 @@ def allToNoOp():
 def createWHotboxButtons():
     ''' If the folder is available inside the stamps package, it gets appended into the W_Hotbox packages. '''
     # DONE W_Hotbox buttons imported from stamps extras path
-    w_hotbox_buttons_path = os.path.dirname(__file__).replace("\\","/")+"/extras/W_hotbox"
+    w_hotbox_buttons_path = os.path.dirname(__file__).replace("\\","/")+"/includes/W_hotbox"
     if os.path.exists(w_hotbox_buttons_path):
         hotbox_paths = ""
         hotbox_names = ""
@@ -2092,7 +2092,7 @@ def createWHotboxButtons():
             hotbox_paths += os.pathsep
         if hotbox_names != "":
             hotbox_names += os.pathsep
-        os.environ["W_HOTBOX_REPO_PATHS"] = hotbox_paths + os.path.dirname(__file__).replace("\\","/")+"/extras/W_hotbox"
+        os.environ["W_HOTBOX_REPO_PATHS"] = hotbox_paths + os.path.dirname(__file__).replace("\\","/")+"/includes/W_hotbox"
         os.environ["W_HOTBOX_REPO_NAMES"] = hotbox_names + "Stamps"
 
 #################################
