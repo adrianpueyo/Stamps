@@ -2064,7 +2064,7 @@ def toNoOp(node=""):
     nuke.delete(node)
     d.setSelected(False)
     d.setSelected(True)
-    d.setXYpos(xp+xw-d.screenWidth()/2,yp-18)
+    d.setXYpos(int(xp+xw-d.screenWidth()/2),yp-18)
     nodesFromScript(scr)
     n = nuke.selectedNode()
     n.setXYpos(xp,yp)
@@ -2290,7 +2290,7 @@ def showInGithub():
 
 def showHelp():
      from webbrowser import open as openUrl
-     openUrl("http://www.adrianpueyo.com/Stamps_v1.0.pdf")
+     openUrl("http://www.adrianpueyo.com/Stamps_v1.1.pdf")
 
 def showVideo():        
      from webbrowser import open as openUrl     
