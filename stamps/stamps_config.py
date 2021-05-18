@@ -1,9 +1,9 @@
 #------------------------------------------------------
 # Stamps by Adrian Pueyo and Alexey Kuchinski
 # Smart node connection system for Nuke
-# adrianpueyo.com, 2018-2019
-config_version= "v1.0"
-date = "Sep 16 2019"
+# adrianpueyo.com, 2018-2020
+config_version= "v1.1"
+date = "May 16 2020"
 #-----------------------------------------------------
 import nuke
 import os
@@ -28,6 +28,7 @@ ANCHOR_STYLE = {
 STAMP_STYLE = {
     "tile_color": 16777217,
     "note_font_size": 20,
+    "postage_stamp": 0,
     }
 
 # Override tile_color for specific node classes, to be fancy.
@@ -112,7 +113,7 @@ TagsIgnoreClasses = ["NoOp", "Dot", "Reformat", "DeepReformat", "Crop"]
 
 AnchorClassesAlt = {"2D":"NoOp", "Deep":"DeepExpression", "3D":"EditGeo", "Particle":"ParticleExpression"}
 AnchorClassesAlt = {"2D":"NoOp"}
-StampClassesAlt = {"2D":"NoOp", "Deep":"DeepExpression", "3D":"LookupGeo", "Camera":"DummyCam", "Axis":"Axis","Particle":"ParticleExpression"}
+StampClassesAlt = {"2D":"PostageStamp", "Deep":"DeepExpression", "3D":"LookupGeo", "Camera":"DummyCam", "Axis":"Axis","Particle":"ParticleExpression"}
 
 # Use the dictionary above to define the base node classes you want for each type.
 # For any type you don't define, it will use a NoOp. Available types: 2D, 3D, Deep, Particle, Camera, Axis

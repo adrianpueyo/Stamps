@@ -1,0 +1,1 @@
+Directory needed by W_hotbox.

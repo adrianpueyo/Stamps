@@ -1,9 +1,9 @@
 #------------------------------------------------------
 # Stamps by Adrian Pueyo and Alexey Kuchinski
 # Smart node connection system for Nuke
-# adrianpueyo.com, 2018-2019
-version= "v1.0"
-date = "Sep 27 2019"
+# adrianpueyo.com, 2018-2021
+version= "v1.1"
+date = "May 18 2021"
 #-----------------------------------------------------
 
 # Constants
@@ -20,7 +20,7 @@ NodeExceptionClasses = ["Viewer"] # Nodes that won't accept stamps
 ParticleExceptionClasses = ["ParticleToImage"] # Nodes with "Particle" in class and an input called "particles" that don't classify as particles.
 StampClasses = {"2D":"NoOp", "Deep":"DeepExpression"}
 AnchorClassesAlt = {"2D":"NoOp", "Deep":"DeepExpression"}
-StampClassesAlt = {"2D":"NoOp", "Deep":"DeepExpression", "3D":"LookupGeo", "Camera":"DummyCam", "Axis":"Axis", "Particle":"ParticleExpression"}
+StampClassesAlt = {"2D":"PostageStamp", "Deep":"DeepExpression", "3D":"LookupGeo", "Camera":"DummyCam", "Axis":"Axis", "Particle":"ParticleExpression"}
 InputIgnoreClasses = ["NoOp", "Dot", "Reformat", "DeepReformat", "Crop"]
 TitleIgnoreClasses = ["NoOp", "Dot", "Reformat", "DeepReformat", "Crop"]
 TagsIgnoreClasses = ["NoOp", "Dot", "Reformat", "DeepReformat", "Crop"]
@@ -32,10 +32,10 @@ VERSION_TOOLTIP = "Stamps by Adrian Pueyo and Alexey Kuchinski.\nUpdated "+date+
 STAMPS_SHORTCUT = "F8"
 KEEP_ORIGINAL_TAGS = True
 
-if not globals().has_key('Stamps_LastCreated'):
+if 'Stamps_LastCreated' not in globals():
     Stamps_LastCreated = None
 
-if not globals().has_key('Stamps_MenusLoaded'):
+if 'Stamps_MenusLoaded' not in globals():
     Stamps_MenusLoaded = False
 
 Stamps_LockCallbacks = False
@@ -44,6 +44,11 @@ import nuke
 import nukescripts
 import re
 from functools import partial
+import sys
+import os
+
+if sys.version_info[0] >= 3:
+    unicode = str
 
 # PySide import switch
 try:
@@ -217,6 +222,14 @@ def wiredKnobChanged():
         return
     elif kn == "inputChange":
         wiredGetStyle(n)
+    elif kn == "postage_stamp":
+        n["postageStamp_show"].setVisible(True)
+        n["postageStamp_show"].setValue(k.value())
+    elif kn == "postageStamp_show":
+        try:
+            n["postage_stamp"].setValue(k.value())
+        except:
+            n["postageStamp_show"].setVisible(False)
     elif kn == "title":
         kv = k.value()
         if titleIsLegal(kv):
@@ -258,7 +271,7 @@ def wiredOnCreate():
     n = nuke.thisNode()
     n.knob("toReconnect").setValue(1)
     for k in n.allKnobs():
-        if k.name() not in ['wired_tab','identifier','lockCallbacks','toReconnect','title','prev_title','tags','backdrops','anchor','line1','anchor_label','show_anchor','zoom_anchor','stamps_label','zoomNext','selectSimilar','space_1','reconnect_label','reconnect_this','reconnect_similar','reconnect_all','space_2','advanced_reconnection','reconnect_by_title_label','reconnect_by_title_this','reconnect_by_title_similar', 'reconnect_by_title_selected', 'reconnect_by_selection_label','reconnect_by_selection_this','reconnect_by_selection_similar','reconnect_by_selection_selected','auto_reconnect_by_title','advanced_reconnection','line2','buttonHelp','version']:
+        if k.name() not in ['wired_tab','identifier','lockCallbacks','toReconnect','title','prev_title','tags','backdrops','anchor','line1','anchor_label','show_anchor','zoom_anchor','stamps_label','zoomNext','selectSimilar','space_1','reconnect_label','reconnect_this','reconnect_similar','reconnect_all','space_2','advanced_reconnection','reconnect_by_title_label','reconnect_by_title_this','reconnect_by_title_similar', 'reconnect_by_title_selected', 'reconnect_by_selection_label','reconnect_by_selection_this','reconnect_by_selection_similar','reconnect_by_selection_selected','auto_reconnect_by_title','advanced_reconnection','line2','buttonHelp','version','postageStamp_show']:
             k.setFlag(0x0000000000000400)
 
 def anchorKnobChanged():
@@ -779,6 +792,11 @@ def wired(anchor):
     tags_knob.setTooltip("Tags of this stamp's Anchor, for information purpose only.\nClick \"show anchor\" to change them.")
     backdrops_knob = nuke.Text_Knob('backdrops','Backdrops:', " ")
     backdrops_knob.setTooltip("Labels of backdrop nodes which contain this stamp's Anchor.")
+    postageStamp_knob = nuke.Boolean_Knob("postageStamp_show","postage stamp")
+    postageStamp_knob.setTooltip("Enable the postage stamp thumbnail in this node.\nYou're seeing this because the class of this node includes the postage_stamp knob.")
+    postageStamp_knob.setFlag(nuke.STARTLINE)
+    postageStamp_knob.setVisible("postage_stamp" in n.knobs() and nodeType(n) == "2D")
+
     anchor_knob = nuke.String_Knob('anchor','Anchor', anchor.name()) # This goes in the advanced part
 
     for k in [wiredTab_knob, identifier_knob, lock_knob, toReconnect_knob, title_knob, prev_title_knob, tags_knob, backdrops_knob]:
@@ -787,6 +805,7 @@ def wired(anchor):
     wiredTab_knob.setFlag(0) # Open the tab
 
     n.addKnob(nuke.Text_Knob("line1", "", "")) # Line
+    n.addKnob(postageStamp_knob)
 
     ### Buttons
 
@@ -912,17 +931,18 @@ def getAvailableName(name = "Untitled", rand=False):
 
 class AnchorSelector(QtWidgets.QDialog):
     '''
-    Panel to select an anchor, showing the different anchors on dropdowns based on their tags.
+    Panel to select one or more anchors, showing the different anchors on dropdowns based on their tags.
     '''
 
     # TODO LATER:
     # - Have three columns, distinguished, like an asset loader. Maybe even with border color?
-    # - Button to activate the "Multiple" mode (off by default) which will not close it on clicking "OK"
-    # - Ability to show and hide backdrops (would turn off their visibility or "bookmark")
+    # - Ability to show and hide backdrops (would turn off their visibility or "bookmark"):
+    #    - Checkbox named "show backdrops" maybe that gets saved in nuke root. If you want it permanent you can save it inside stamps_config.
 
     def __init__(self):
         super(AnchorSelector, self).__init__()
         self.setWindowTitle("Stamps: Select an Anchor.")
+        self.chosen_anchors = []
         self.initUI()
         #self.setFixedSize(self.sizeHint())
         #self.setFixedWidth(self.sizeHint()[0])
@@ -936,7 +956,7 @@ class AnchorSelector(QtWidgets.QDialog):
         # Header
         self.headerTitle = QtWidgets.QLabel("Anchor Stamp Selector")
         self.headerTitle.setStyleSheet("font-weight:bold;color:#CCCCCC;font-size:14px;")
-        self.headerSubtitle = QtWidgets.QLabel("Select an Anchor to make a Stamp for.")
+        self.headerSubtitle = QtWidgets.QLabel("Select an Anchor to make a Stamp for.<br/><b><small style='color:#CCC'>Right click on the OK buttons for multiple selection.</small></b>")
         self.headerSubtitle.setStyleSheet("color:#999")
 
         self.headerLine = QtWidgets.QFrame()
@@ -965,6 +985,7 @@ class AnchorSelector(QtWidgets.QDialog):
         self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.scroll.setWidgetResizable(True)
         self.scroll.setWidget(self.scroll_content)
+        self.scroll.setFrameStyle(QtWidgets.QFrame.Panel | QtWidgets.QFrame.Sunken)
 
         self.grid = QtWidgets.QGridLayout()
         #self.grid.setSpacing(0)
@@ -986,7 +1007,7 @@ class AnchorSelector(QtWidgets.QDialog):
         middleLine.setMidLineWidth(1)
         middleLine.setFrameShadow(QtWidgets.QFrame.Sunken)
 
-        if len(filter(None,self._all_tags))>0:
+        if len(list(filter(None,self._all_tags)))>0:
             tags_label = QtWidgets.QLabel("<i>Tags")
             tags_label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
             tags_label.setStyleSheet("color:#666;margin:0px;padding:0px;padding-left:3px")
@@ -1012,6 +1033,7 @@ class AnchorSelector(QtWidgets.QDialog):
             tag_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
 
             anchors_dropdown = QtWidgets.QComboBox()
+            anchors_dropdown.setMinimumWidth(200)
             for i, cur_name in enumerate(self._all_anchors_names):
                 cur_title = self._all_anchors_titles[i]
                 title_repeated = self.titleRepeatedForTag(cur_title, tag, mode)
@@ -1034,6 +1056,11 @@ class AnchorSelector(QtWidgets.QDialog):
             ok_btn = QtWidgets.QPushButton("OK")
             ok_btn.clicked.connect(partial(self.okPressed,dropdown=anchors_dropdown))
 
+            ok_btn.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+            ok_btn.setMaximumWidth(ok_btn.sizeHint().width()-19)
+            ok_btn.customContextMenuRequested.connect(partial(self.okRightClicked,anchors_dropdown))
+
+
             self.grid.addWidget(tag_label,tag_num*10+1,0)
             self.grid.addWidget(anchors_dropdown,tag_num*10+1,1)
             self.grid.addWidget(ok_btn,tag_num*10+1,2)
@@ -1054,13 +1081,17 @@ class AnchorSelector(QtWidgets.QDialog):
                 all_tag_texts.append("{0} ({1})".format(cur_title, cur_name))
             else:
                 all_tag_texts.append(cur_title)
-        self.all_tag_sorted = sorted(zip(all_tag_texts,all_tag_names),  key=lambda pair: pair[0].lower())
+        self.all_tag_sorted = sorted(list(zip(all_tag_texts,all_tag_names)),  key=lambda pair: pair[0].lower())
 
         for [text, name] in self.all_tag_sorted:
             self.all_anchors_dropdown.addItem(text, name)
 
         all_ok_btn = QtWidgets.QPushButton("OK")
         all_ok_btn.clicked.connect(partial(self.okPressed,dropdown=self.all_anchors_dropdown))
+
+        all_ok_btn.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        all_ok_btn.customContextMenuRequested.connect(partial(self.okRightClicked,self.all_anchors_dropdown))
+
         self.lower_grid.addWidget(all_tag_label,tag_num,0)
         self.lower_grid.addWidget(self.all_anchors_dropdown,tag_num,1)
         self.lower_grid.addWidget(all_ok_btn,tag_num,2)
@@ -1076,8 +1107,10 @@ class AnchorSelector(QtWidgets.QDialog):
         all_tag_count = [stampCount(i) for i in self._all_anchors_names] # Number of stamps for each anchor!
 
         popular_tag_texts = [] # List of popular texts of the items (usually equals the "title (x2)", or "title (name) (x2)")
-        popular_anchors_names = [x for _,x in sorted(zip(all_tag_count,self._all_anchors_names),reverse=True)]
-        popular_anchors_titles = [x for _,x in sorted(zip(all_tag_count,self._all_anchors_titles),reverse=True)]
+        sorted_names_and_titles = [(x,y) for (_,x,y) in sorted(list(zip(all_tag_count,self._all_anchors_names,self._all_anchors_titles)),reverse=True)]
+        popular_anchors_names = [x for x,_ in sorted_names_and_titles]
+        popular_anchors_titles = [x for _,x in sorted_names_and_titles]
+        #popular_anchors_titles = [x for _,x in sorted(zip(all_tag_count,self._all_anchors_titles),reverse=True)]
         popular_anchors_count = sorted(all_tag_count,reverse=True)
 
         for i, cur_name in enumerate(popular_anchors_names):
@@ -1093,6 +1126,10 @@ class AnchorSelector(QtWidgets.QDialog):
 
         popular_ok_btn = QtWidgets.QPushButton("OK")
         popular_ok_btn.clicked.connect(partial(self.okPressed,dropdown=self.popular_anchors_dropdown))
+
+        popular_ok_btn.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        popular_ok_btn.customContextMenuRequested.connect(partial(self.okRightClicked,self.popular_anchors_dropdown))
+
         self.lower_grid.addWidget(popular_tag_label,tag_num,0)
         self.lower_grid.addWidget(self.popular_anchors_dropdown,tag_num,1)
         self.lower_grid.addWidget(popular_ok_btn,tag_num,2)
@@ -1116,20 +1153,30 @@ class AnchorSelector(QtWidgets.QDialog):
 
         custom_ok_btn = QtWidgets.QPushButton("OK")
         custom_ok_btn.clicked.connect(partial(self.okCustomPressed,dropdown=self.custom_anchors_lineEdit))
+
+        custom_ok_btn.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        custom_ok_btn.customContextMenuRequested.connect(partial(self.okCustomRightClicked,self.custom_anchors_lineEdit))
+
         self.lower_grid.addWidget(custom_tag_label,tag_num,0)
         self.lower_grid.addWidget(self.custom_anchors_lineEdit,tag_num,1)
         self.lower_grid.addWidget(custom_ok_btn,tag_num,2)
 
+        for i in [self.all_anchors_dropdown,self.popular_anchors_dropdown]:
+            i.setSizeAdjustPolicy(QtWidgets.QComboBox.SizeAdjustPolicy.AdjustToContentsOnFirstShow)
+            i.setMinimumWidth(200)
+            i.resize(500,i.sizeHint().height())
+            i.setSizePolicy(QtWidgets.QSizePolicy.Ignored,i.sizePolicy().verticalPolicy())
+
         # Layout shit
         self.grid.setColumnStretch(1,1)
-        if len(filter(None,self._all_tags_and_backdrops)):
+        if len(list(filter(None,self._all_tags_and_backdrops))):
             self.master_layout.addWidget(self.scroll)
         else:
             self.master_layout.addWidget(self.headerLine)
         self.master_layout.addLayout(self.lower_grid)
         self.setLayout(self.master_layout)
         self.resize(self.sizeHint().width(),min(self.sizeHint().height()+10,700))
-        self.setFixedWidth(self.sizeHint().width()+40)
+        #self.setFixedWidth(self.sizeHint().width()+40)
 
     def keyPressEvent(self, e):
         selectorType = type(self.focusWidget()).__name__ #QComboBox or QLineEdit
@@ -1183,7 +1230,7 @@ class AnchorSelector(QtWidgets.QDialog):
 
         #titles_upper = [x.upper() for x in self._all_anchors_titles]
 
-        titles_and_names = zip(self._all_anchors_titles, self._all_anchors_names)
+        titles_and_names = list(zip(self._all_anchors_titles, self._all_anchors_names))
         titles_and_names.sort(key=lambda tup: tup[0].upper())
         self._all_anchors_titles = [x for x, y in titles_and_names]
         self._all_anchors_names = [y for x, y in titles_and_names]
@@ -1214,7 +1261,7 @@ class AnchorSelector(QtWidgets.QDialog):
         title_repetitions = titles_with_tag.count(title)
         return (title_repetitions > 1)
 
-    def okPressed(self, dropdown):
+    def okPressed(self, dropdown, close=True):
         ''' Runs after an ok button is pressed '''
         dropdown_value = dropdown.currentText()
         dropdown_index = dropdown.currentIndex()
@@ -1228,12 +1275,16 @@ class AnchorSelector(QtWidgets.QDialog):
         self.chosen_value = dropdown_value
         self.chosen_anchor_name = dropdown_data
         if match_anchor is not None:
-            self.chosen_anchor = match_anchor
-            self.accept()
+            self.chosen_anchors.append(match_anchor)
+            if close:
+                self.accept()
         else:
             nuke.message("There was a problem selecting a valid anchor.")
 
-    def okCustomPressed(self, dropdown):
+    def okRightClicked(self, dropdown, position):
+        self.okPressed(dropdown,close=False)
+
+    def okCustomPressed(self, dropdown, close=True):
         ''' Runs after the custom ok button is pressed '''
         global Stamps_LastCreated
         written_value = dropdown.text() # This means it's been written down on the lineEdit
@@ -1241,7 +1292,7 @@ class AnchorSelector(QtWidgets.QDialog):
 
         found_data = None
 
-        if written_value == "" and globals().has_key('Stamps_LastCreated'):
+        if written_value == "" and 'Stamps_LastCreated' in globals():
             found_data = Stamps_LastCreated
         else:
             for [text, name] in reversed(self.all_tag_sorted):
@@ -1259,10 +1310,14 @@ class AnchorSelector(QtWidgets.QDialog):
         self.chosen_value = written_value
         self.chosen_anchor_name = found_data
         if match_anchor is not None:
-            self.chosen_anchor = match_anchor
-            self.accept()
+            self.chosen_anchors.append(match_anchor)
+            if close:
+                self.accept()
         else:
             nuke.message("There was a problem selecting a valid anchor.")
+
+    def okCustomRightClicked(self, dropdown, position):
+        self.okCustomPressed(dropdown,close=False)
 
 class AnchorTags_LineEdit(QtWidgets.QLineEdit):
     new_text = QtCore.Signal(object, object)
@@ -1307,7 +1362,7 @@ class TagsCompleter(QtWidgets.QCompleter):
 
     def update(self, text_tags, completion_prefix):
         tags = list(self.all_tags-set(text_tags))
-        model = QtGui.QStringListModel(tags, self)
+        model = QtCore.QStringListModel(tags, self)
         self.setModel(model)
         self.setCompletionPrefix(completion_prefix)
         self.complete()
@@ -1641,6 +1696,8 @@ def stampCreateAnchor(node = None, extra_tags = [], no_default_tag = False):
         node.setSelected(True)
         default_title = getDefaultTitle(realInput(node,stopOnLabel=True,mode="title"))
         default_tags = list(set([nodeType(realInput(node,mode="tags"))]))
+        if node.Class() in ["ScanlineRender"]:
+            default_tags += ["2D","Deep"]
         node_type = nodeType(realInput(node))
         window_title = "New Stamp: "+str(node.name())
     else:
@@ -1672,7 +1729,7 @@ def stampCreateAnchor(node = None, extra_tags = [], no_default_tag = False):
     if no_default_tag:
         default_tags = ", ".join(extra_tags + [""])
     else:
-        default_tags = filter(None,list(dict.fromkeys(default_tags + extra_tags)))
+        default_tags = list(filter(None,list(dict.fromkeys(default_tags + extra_tags))))
         default_tags = ", ".join(default_tags + [""])
 
     global new_anchor_panel
@@ -1702,7 +1759,7 @@ def stampCreateAnchor(node = None, extra_tags = [], no_default_tag = False):
         
     return extra_tags
 
-def stampSelectAnchor():
+def stampSelectAnchors():
     '''
     Panel to select a stamp anchor (if there are any)
     Returns: selected anchor node, or None.
@@ -1717,23 +1774,31 @@ def stampSelectAnchor():
         nuke.message("Please create some stamps first...")
         return None
     else:
-        global select_anchor_panel
-        select_anchor_panel = AnchorSelector()
-        if select_anchor_panel.exec_(): # If user clicks OK
-            chosen_anchor = select_anchor_panel.chosen_anchor
-            if chosen_anchor:
-                return chosen_anchor
+        global select_anchors_panel
+        select_anchors_panel = AnchorSelector()
+        if select_anchors_panel.exec_(): # If user clicks OK
+            chosen_anchors = select_anchors_panel.chosen_anchors
+            if chosen_anchors:
+                return chosen_anchors
         return None
 
 def stampCreateWired(anchor = ""):
     ''' Create a wired stamp from an anchor node. '''
     global Stamps_LastCreated
+    nw = ""
+    nws = []
     if anchor == "":
-        anchor = stampSelectAnchor()
-        if anchor == None:
+        anchors = stampSelectAnchors()
+        if anchorSelectWireds == None:
             return
-        nw = wired(anchor = anchor)
-        nw.setInput(0,anchor)
+        if anchors:
+            for i, anchor in enumerate(anchors):
+                nw = wired(anchor = anchor)
+                nw.setInput(0,anchor)
+                nws.append(nw)
+                if i>0:
+                    nws[i].setXYpos(nws[i-1].xpos()+100,nws[i-1].ypos())
+
     else:
         ns = nuke.selectedNodes()
         for n in ns:
@@ -1743,13 +1808,15 @@ def stampCreateWired(anchor = ""):
         dot.setInput(0,anchor)
         nw = wired(anchor = anchor)
         code = "dummy = nuke.nodes.{}()".format(nw.Class())
-        exec(code)
+        namespace = {}
+        exec(code,globals(),namespace)
+        dummy = namespace["dummy"]
         nww = dummy.screenWidth()
         nuke.delete(dummy)
         nuke.delete(dot)
         for n in ns:
             n.setSelected(True)
-        nw.setXYpos(anchor.xpos()+anchor.screenWidth()/2-nww/2 ,anchor.ypos()+56)
+        nw.setXYpos(int(anchor.xpos()+anchor.screenWidth()/2-nww/2) ,anchor.ypos()+56)
         anchor.setSelected(False)
     return nw
 
@@ -1801,7 +1868,7 @@ def stampType(n = ""):
         return False
 
 def nodeType(n=""):
-    '''Returns the node type: Camera, Deep, 3D, Particles, Image or False'''
+    '''Returns the node type: Camera, Deep, 3D, Particles, 2D or False'''
     try:
         nodeClass = n.Class()
     except:
@@ -1810,11 +1877,13 @@ def nodeType(n=""):
         return "Deep"
     elif nodeClass.startswith("Particle") and nodeClass not in ParticleExceptionClasses:
         return "Particle"
-    elif nodeClass in ["Camera", "Camera2"]:
+    elif nodeClass.startswith("ScanlineRender"):
+        return False
+    elif nodeClass in ["Camera", "Camera2", "Camera3"]:
         return "Camera"
-    elif nodeClass in ["Axis", "Axis2"]:
+    elif nodeClass in ["Axis", "Axis2","Axis3"]:
         return "Axis"
-    elif (n.knob("render_mode") and n.knob("display")) or nodeClass in ["Axis2","GeoNoOp","EditGeo"]:
+    elif (n.knob("render_mode") and n.knob("display")) or nodeClass in ["GeoNoOp","EditGeo"]:
         return "3D"
     else:
         return "2D"
@@ -1849,7 +1918,7 @@ def allTags(selection=""):
         except:
             pass
 
-    all_tags = filter(None,list(all_tags))
+    all_tags = [i for i in list(all_tags) if i]
     all_tags.sort(key=str.lower)
     return all_tags
 
@@ -1979,7 +2048,7 @@ def toNoOp(node=""):
     for i, line in enumerate(scr_first):
         if not any([line.startswith(x) or line.startswith(" "+x) for x in legal_starts]):
             scr_first[i] = ""
-    scr_first = "\n".join(filter(None,scr_first)+[""])
+    scr_first = "\n".join([i for i in scr_first if i]+[""])
     scr_split[0] = scr_first
 
     scr = "addUserKnob".join(scr_split)
@@ -1995,7 +2064,7 @@ def toNoOp(node=""):
     nuke.delete(node)
     d.setSelected(False)
     d.setSelected(True)
-    d.setXYpos(xp+xw-d.screenWidth()/2,yp-18)
+    d.setXYpos(int(xp+xw-d.screenWidth()/2),yp-18)
     nodesFromScript(scr)
     n = nuke.selectedNode()
     n.setXYpos(xp,yp)
@@ -2012,6 +2081,23 @@ def allToNoOp():
     for n in nuke.allNodes():
         if stampType(n) and n.Class() != "NoOp":
             toNoOp(n)
+
+def createWHotboxButtons():
+    ''' If the folder is available inside the stamps package, it gets appended into the W_Hotbox packages. '''
+    # DONE W_Hotbox buttons imported from stamps extras path
+    w_hotbox_buttons_path = os.path.dirname(__file__).replace("\\","/")+"/includes/W_hotbox"
+    if os.path.exists(w_hotbox_buttons_path):
+        hotbox_paths = ""
+        hotbox_names = ""
+        if "W_HOTBOX_REPO_PATHS" in os.environ.keys() and "W_HOTBOX_REPO_NAMES" in os.environ.keys():
+            hotbox_paths = os.environ["W_HOTBOX_REPO_PATHS"]
+            hotbox_names = os.environ["W_HOTBOX_REPO_NAMES"]
+        if hotbox_paths != "":
+            hotbox_paths += os.pathsep
+        if hotbox_names != "":
+            hotbox_names += os.pathsep
+        os.environ["W_HOTBOX_REPO_PATHS"] = hotbox_paths + os.path.dirname(__file__).replace("\\","/")+"/includes/W_hotbox"
+        os.environ["W_HOTBOX_REPO_NAMES"] = hotbox_names + "Stamps"
 
 #################################
 ### Menu functions
@@ -2080,7 +2166,7 @@ def addTags(ns=""):
             else:
                 continue
             existing_tags = re.split(r"[\s]*,[\s]*", tags_knob.value().strip())
-            merged_tags = filter(None,list(set(existing_tags + added_tags)))
+            merged_tags = list(filter(None,list(set(existing_tags + added_tags))))
             tags_knob.setValue(", ".join(merged_tags))
             i += 1
             continue
@@ -2122,7 +2208,7 @@ def renameTag(ns=""):
             else:
                 continue
 
-            existing_tags = filter(None,re.split(r"[\s]*,[\s]*", tags_knob.value()))
+            existing_tags = list(filter(None,re.split(r"[\s]*,[\s]*", tags_knob.value())))
             added_tag_list = re.split(r"[\s]*,[\s]*", added_tag.strip())
             added_tagReplace_list = re.split(r"[\s]*,[\s]*", added_tagReplace)
 
@@ -2131,7 +2217,7 @@ def renameTag(ns=""):
                 for rtag in added_tagReplace_list:
                     merged_tags = [rtag if x == atag else x for x in merged_tags]
 
-            merged_tags = filter(None,merged_tags)
+            merged_tags = [i for i in merged_tags if i]
 
             if merged_tags != existing_tags:
                 tags_knob.setValue(", ".join(merged_tags))
@@ -2204,7 +2290,7 @@ def showInGithub():
 
 def showHelp():
      from webbrowser import open as openUrl
-     openUrl("http://www.adrianpueyo.com/Stamps_v1.0.pdf")
+     openUrl("http://www.adrianpueyo.com/Stamps_v1.1.pdf")
 
 def showVideo():        
      from webbrowser import open as openUrl     
@@ -2235,6 +2321,14 @@ def stampBuildMenus():
         m.addCommand('Edit/Stamps/Video tutorials', 'stamps.showVideo()')
         m.addCommand('Edit/Stamps/Documentation (.pdf)', 'stamps.showHelp()')
         nuke.menu('Nodes').addCommand('Other/Stamps', 'stamps.goStamp()', STAMPS_SHORTCUT, icon="stamps.png")
+
+        createWHotboxButtons()
+
+def addIncludesPath():
+    includes_dir = os.path.join(os.path.dirname(__file__),"includes")
+    if os.path.isdir(includes_dir):
+        nuke.pluginAddPath(includes_dir)
+
 
 #################################
 ### MAIN IMPLEMENTATION
@@ -2278,3 +2372,4 @@ def goStamp(ns=""):
                     n['matteOnly'].setValue(1)
 
 stampBuildMenus()
+addIncludesPath()
