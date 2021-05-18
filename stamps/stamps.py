@@ -3,7 +3,7 @@
 # Smart node connection system for Nuke
 # adrianpueyo.com, 2018-2021
 version= "v1.1"
-date = "May 17 2021"
+date = "May 18 2021"
 #-----------------------------------------------------
 
 # Constants
@@ -20,7 +20,7 @@ NodeExceptionClasses = ["Viewer"] # Nodes that won't accept stamps
 ParticleExceptionClasses = ["ParticleToImage"] # Nodes with "Particle" in class and an input called "particles" that don't classify as particles.
 StampClasses = {"2D":"NoOp", "Deep":"DeepExpression"}
 AnchorClassesAlt = {"2D":"NoOp", "Deep":"DeepExpression"}
-StampClassesAlt = {"2D":"NoOp", "Deep":"DeepExpression", "3D":"LookupGeo", "Camera":"DummyCam", "Axis":"Axis", "Particle":"ParticleExpression"}
+StampClassesAlt = {"2D":"PostageStamp", "Deep":"DeepExpression", "3D":"LookupGeo", "Camera":"DummyCam", "Axis":"Axis", "Particle":"ParticleExpression"}
 InputIgnoreClasses = ["NoOp", "Dot", "Reformat", "DeepReformat", "Crop"]
 TitleIgnoreClasses = ["NoOp", "Dot", "Reformat", "DeepReformat", "Crop"]
 TagsIgnoreClasses = ["NoOp", "Dot", "Reformat", "DeepReformat", "Crop"]
@@ -1696,6 +1696,8 @@ def stampCreateAnchor(node = None, extra_tags = [], no_default_tag = False):
         node.setSelected(True)
         default_title = getDefaultTitle(realInput(node,stopOnLabel=True,mode="title"))
         default_tags = list(set([nodeType(realInput(node,mode="tags"))]))
+        if node.Class() in ["ScanlineRender"]:
+            default_tags += ["2D","Deep"]
         node_type = nodeType(realInput(node))
         window_title = "New Stamp: "+str(node.name())
     else:
@@ -1866,7 +1868,7 @@ def stampType(n = ""):
         return False
 
 def nodeType(n=""):
-    '''Returns the node type: Camera, Deep, 3D, Particles, Image or False'''
+    '''Returns the node type: Camera, Deep, 3D, Particles, 2D or False'''
     try:
         nodeClass = n.Class()
     except:
@@ -1875,11 +1877,13 @@ def nodeType(n=""):
         return "Deep"
     elif nodeClass.startswith("Particle") and nodeClass not in ParticleExceptionClasses:
         return "Particle"
-    elif nodeClass in ["Camera", "Camera2"]:
+    elif nodeClass.startswith("ScanlineRender"):
+        return False
+    elif nodeClass in ["Camera", "Camera2", "Camera3"]:
         return "Camera"
-    elif nodeClass in ["Axis", "Axis2"]:
+    elif nodeClass in ["Axis", "Axis2","Axis3"]:
         return "Axis"
-    elif (n.knob("render_mode") and n.knob("display")) or nodeClass in ["Axis2","GeoNoOp","EditGeo"]:
+    elif (n.knob("render_mode") and n.knob("display")) or nodeClass in ["GeoNoOp","EditGeo"]:
         return "3D"
     else:
         return "2D"
@@ -2320,6 +2324,12 @@ def stampBuildMenus():
 
         createWHotboxButtons()
 
+def addIncludesPath():
+    includes_dir = os.path.join(os.path.dirname(__file__),"includes")
+    if os.path.isdir(includes_dir):
+        nuke.pluginAddPath(includes_dir)
+
+
 #################################
 ### MAIN IMPLEMENTATION
 #################################
@@ -2362,3 +2372,4 @@ def goStamp(ns=""):
                     n['matteOnly'].setValue(1)
 
 stampBuildMenus()
+addIncludesPath()
