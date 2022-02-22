@@ -31,6 +31,7 @@ STAMPS_HELP = "Stamps by Adrian Pueyo and Alexey Kuchinski.\nUpdated "+date
 VERSION_TOOLTIP = "Stamps by Adrian Pueyo and Alexey Kuchinski.\nUpdated "+date+"."
 STAMPS_SHORTCUT = "F8"
 KEEP_ORIGINAL_TAGS = True
+SHOW_PROPERTIES = False
 
 if 'Stamps_LastCreated' not in globals():
     Stamps_LastCreated = None
@@ -144,7 +145,7 @@ def wiredTagsAndBackdrops(n, updateSimilar=False):
             ns = [i for i in allWireds() if i.knob("anchor").value() == an]
         else:
             ns = [n]
-        
+
         for n in ns:
             try:
                 tags_knob = n.knob("tags")
@@ -326,7 +327,7 @@ def retitleAnchor(ref = ""):
     '''
     Retitle Anchor of current wired stamp to match its title.
     returns: anchor node
-    ''' 
+    '''
     if ref == "":
         ref = nuke.thisNode()
     try:
@@ -674,15 +675,15 @@ except:
 ### STAMP, ANCHOR, WIRED
 #################################
 
-def anchor(title = "", tags = "", input_node = "", node_type = "2D"):
+def anchor(title = "", tags = "", input_node = "", node_type = "2D", anchor_inpanel = SHOW_PROPERTIES):
     ''' Anchor Stamp '''
     try:
-        n = nuke.createNode(AnchorClassesAlt[node_type])
+        n = nuke.createNode(AnchorClassesAlt[node_type], inpanel = anchor_inpanel)
     except:
         try:
-            n = nuke.createNode(StampClasses[node_type])
+            n = nuke.createNode(StampClasses[node_type], inpanel = anchor_inpanel)
         except:
-            n = nuke.createNode("NoOp")
+            n = nuke.createNode("NoOp", inpanel = anchor_inpanel)
     name = getAvailableName("Anchor",rand=True)
     n["name"].setValue(name)
     # Set default knob values
@@ -748,19 +749,19 @@ def anchor(title = "", tags = "", input_node = "", node_type = "2D"):
 
     return n
 
-def wired(anchor):
+def wired(anchor, wired_inpanel = SHOW_PROPERTIES):
     ''' Wired Stamp '''
     global Stamps_LastCreated
     Stamps_LastCreated = anchor.name()
 
     node_type = nodeType(realInput(anchor))
     try:
-        n = nuke.createNode(StampClassesAlt[node_type])
+        n = nuke.createNode(StampClassesAlt[node_type], inpanel = wired_inpanel)
     except:
         try:
-            n = nuke.createNode(StampClasses[node_type])
+            n = nuke.createNode(StampClasses[node_type], inpanel = wired_inpanel)
         except:
-            n = nuke.createNode("NoOp")
+            n = nuke.createNode("NoOp", inpanel = wired_inpanel)
     n["name"].setValue(getAvailableName("Stamp"))
     # Set default knob values
     for i,j in wired_defaults.items():
@@ -875,7 +876,7 @@ def wired(anchor):
     buttonReconnectBySelectionSimilar.setTooltip("Force reconnect this Stamp and similar ones to a selected Anchor, whatever its name or title.\nIMPORTANT: Use this carefully, and only when the normal reconnection doesn't work.")
     buttonReconnectBySelectionSelected = nuke.PyScript_Knob("reconnect_by_selection_selected","selected","stamps.wiredReconnectBySelectionSelected()")
     buttonReconnectBySelectionSelected.setTooltip("Force reconnect all selected Stamps to an also selected Anchor, whatever its name or title.\nIMPORTANT: Use this carefully, and only when the normal reconnection doesn't work.")
-    
+
     checkboxReconnectByTitleOnCreation = nuke.Boolean_Knob("auto_reconnect_by_title","<font color=#ED9977>&nbsp; auto-reconnect by title")
     checkboxReconnectByTitleOnCreation.setTooltip("When creating this stamp again (like on copy-paste), auto-reconnect it by title instead of doing it by the saved anchor's name, and auto-turn this off immediately.\nIMPORTANT: Should be off by default. Only use this for setting up templates.")
     checkboxReconnectByTitleOnCreation.setFlag(nuke.STARTLINE)
@@ -1046,7 +1047,7 @@ class AnchorSelector(QtWidgets.QDialog):
 
                 if cur_name not in tag_dict.keys():
                     continue
-                
+
                 if tag in tag_dict[cur_name]:
                     if title_repeated:
                         anchors_dropdown.addItem("{0} ({1})".format(cur_title, cur_name), cur_name)
@@ -1756,7 +1757,7 @@ def stampCreateAnchor(node = None, extra_tags = [], no_default_tag = False):
             break
         else:
             break
-        
+
     return extra_tags
 
 def stampSelectAnchors():
@@ -1893,7 +1894,7 @@ def allAnchors(selection=""):
     if selection == "":
         anchors = [a for a in nodes if isAnchor(a)]
     else:
-        anchors = [a for a in nodes if a in selection and isAnchor(a)]    
+        anchors = [a for a in nodes if a in selection and isAnchor(a)]
     return anchors
 
 def allWireds(selection=""):
@@ -1901,7 +1902,7 @@ def allWireds(selection=""):
     if selection == "":
         wireds = [a for a in nodes if isWired(a)]
     else:
-        wireds = [a for a in nodes if a in selection and isWired(a)]   
+        wireds = [a for a in nodes if a in selection and isWired(a)]
     return wireds
 
 def totalAnchors(selection=""):
@@ -2139,7 +2140,7 @@ def addTags(ns=""):
         if not nuke.ask("Nothing is selected. Do you wish to add tags to ALL nodes in the script?"):
             return
         ns = nuke.allNodes()
-    
+
     global stamps_addTags_panel
     stamps_addTags_panel = AddTagsPanel(all_tags = allTags(), default_tags = "")
     if stamps_addTags_panel.exec_():
@@ -2267,7 +2268,7 @@ def selectedToggleAutorec():
             n.knob("auto_reconnect_by_title").setValue(0)
             count += 1
         nuke.message("<b>auto-reconnect by title</b> is now <b>False</b> on {} selected stamps.".format(str(count)))
-        
+
 def selectedSelectSimilar():
     ns = [n for n in nuke.selectedNodes() if isWired(n) or isAnchor(n)]
     for n in ns:
@@ -2292,8 +2293,8 @@ def showHelp():
      from webbrowser import open as openUrl
      openUrl("http://www.adrianpueyo.com/Stamps_v1.1.pdf")
 
-def showVideo():        
-     from webbrowser import open as openUrl     
+def showVideo():
+     from webbrowser import open as openUrl
      openUrl("https://vimeo.com/adrianpueyo/knobscripter2")
 
 def stampBuildMenus():
