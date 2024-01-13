@@ -1,0 +1,51 @@
+Changelog Stamps 2.0
+
+Merging Stamps v1.1 with Labelconnector v1.5
+
+changes to Stamps itself:
+
+- changed the text on anchors/stamps to html to be able to colorize parts differently
+- added new callbacks to ensure hide/disable functionality pressing D on Anchors (and preserving it's state with saving/loading)
+- disabled PostageStamps by default. Defaulting to NoOps now.
+- added jumpORcolor(), showConnections(), jumpKeepingPreviousSelection(), change_color_on_anchors()
+- removed the check for name duplicates when creating new anchors/stamps. Nuke can do it by default with the node.setName() super fast. This improves speed quite tremendously! Collisions are still nto a problem, the new Anchor name might be just one digit apart, but that is as "collision proof" as any other random name when copying to another script.
+- made some changes so the "drag node with ctrl-shift onto another node to switch their places" works now with stamps as well, without loosing their proper connections
+- added USE_LABELCONNECTOR_UI constant to stamps_config.py to be able to switch between the old and new UI
+- added the functionality to also derive different default colors based on e.g. naming, category, ... similar to default tags
+- disabled all processing in the DeepExpression nodes used as stamps/anchors
+- changed "except" to "except Exception" to comply with these new Python 3 guidelines
+
+new UI:
+
+- implemented UI from LabelConnector
+    - adjusted UI to fit Stamps with Categories derived from Tags and/or Backdrops
+    - Top row will show all categories, Tags on the left, Backdrops on the right
+    - remembers previously selected category
+
+    - character based search (similar to Nuke Node Menu, e.g. "rc" can resolve "Roto Character")
+    - search is case insensitive
+    - tab or enter creates top result
+    - it always searches amongst all anchors, not just the selected category
+
+- implemented Color UI from LabelConnector
+    - ctrl+STAMPS_SHORTCUT with one or multiple Anchors selected
+    - quickly change color of selected anchor
+    - color will be changed on all stamps accordingly
+    - COLOR_LIST in labelConnectorForStamps.py can be adjusted to your liking
+
+new shortcuts (to make these even more handy, we have stamps on "E" by default. We didn't change the default in this version though, it's F8)
+
+    in the new UI:
+    - right click: temporarily set viewer to that anchor (click again or closing UI reverts to previous state)
+    - shift+click: select and create multiple
+    - alt+click: open color quick menu to colorize anchor
+    - ctrl+click: jumps to anchor or category (also works on top row of UI)
+    - ctrl+alt+click: jump/cycle through stamps
+
+    outside of the UI:
+    - ctrl+STAMPS_SHORTCUT: with one or multiple Anchors selected, set a new color
+    - ctrl+STAMPS_SHORTCUT: with Stamp selected, will jump to it's anchor
+    - shift+STAMPS_SHORTCUT: with one or multiple anchors or stamps selected, will select all stamps of their/that anchor
+    - D: disable (hide) anchors. They won't show up in the new UI. (e.g. you load a different shot as ref into your comp)
+
+
