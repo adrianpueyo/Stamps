@@ -20,9 +20,9 @@ import nuke
 # 1. MAIN DEFAULTS
 # ----------------------------------------------
 
-STAMPS_SHORTCUT = "E"
+STAMPS_SHORTCUT = "F8"
 
-USE_LABELCONNECTOR_UI = True
+USE_LABELCONNECTOR_UI = True # restart nuke to take effect. True uses LabelConnector UI, False uses the previous UI
 
 ANCHOR_STYLE = {
     "tile_color": 4294967041,

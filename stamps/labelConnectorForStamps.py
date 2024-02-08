@@ -154,7 +154,7 @@ class AnchorButton(QtGuiWidgets.QPushButton):
         self.wrapped_label = "\n".join(textwrap.wrap(anchor.knob("title").value(), width=MAX_CHARS_ANCHOR_BUTTONS))
         self.anchor = anchor
         self.tags = []
-        self.backdrop_tags = []
+        self.backdrop_tags = dict()
         self.entered = False  # stores if mouse is hovering above button, to change name with keypresses
         self.color = rgb2hex(interface2rgb(getTileColor(anchor)))
         self.highlight = BUTTON_HIGHLIGHT_COLOR
@@ -610,15 +610,10 @@ class LabelConnector(QtGuiWidgets.QWidget):
         if self.anchorbuttons_by_backdrop_tags:
             column_counter, row_counter = max_anchor_tag_columns + 1, 0
 
-            # this is a quick'n'dirty solution, but we have to pick n choose somehow anyways in case of multiple backdrops
-            backdrops = nuke.allNodes("BackdropNode")
-
             for tag in sorted(self.anchorbuttons_by_backdrop_tags.keys()):
-                # continuing the quick'n'dirty approach, just picking the first backdrop with the tag
-                for backdrop in backdrops:
-                    if backdrop["label"].value() == tag:
-                        color_from_backdrop = rgb2hex(interface2rgb(backdrop["tile_color"].value()))
-                        break
+                
+                backdrop_node = self.anchorbuttons_by_backdrop_tags[tag][0].backdrop_tags[tag] # pick the backdrop node from first anchor
+                color_from_backdrop = rgb2hex(interface2rgb(backdrop_node["tile_color"].value()))
 
                 tag_button = TagBackdropButton(tag, color=color_from_backdrop, is_backdrop_tag=True, parent=self)
                 tag_button.clicked.connect(self.tag_button_clicked)
@@ -689,13 +684,6 @@ class LabelConnector(QtGuiWidgets.QWidget):
             for anchor_button in self.anchor_buttons:
                 anchor_button.setVisible(False)
 
-            # add a vertical spacer, to force a resize
-            # spacer = QtGuiWidgets.QLabel(self)
-            # spacer.setFixedHeight(1)
-            # spacer.setSizePolicy(QtGuiWidgets.QSizePolicy.Expanding, QtGuiWidgets.QSizePolicy.Fixed)
-            # self.current_anchor_grid_spacers.append(spacer)
-            # self.anchors_grid.addWidget(spacer, 0, 0, 1, self.anchors_grid_width + 1)
-
         elif self.current_view_filter["name"] == "All Anchors":
             for anchor_button in self.anchor_buttons:
                 anchor_button.setVisible(True)
@@ -704,10 +692,6 @@ class LabelConnector(QtGuiWidgets.QWidget):
 
             self.add_dict_with_spacer(self.anchorbuttons_by_tags)
 
-            # double check if this will ever add sth, think it never will
-            # column_counter, row_counter = self.add_dict_with_spacer(
-            #     column_counter, row_counter, self.anchorbuttons_by_backdrop_tags)
-
         else:
             column_counter, row_counter = 0, 0
 
@@ -715,7 +699,7 @@ class LabelConnector(QtGuiWidgets.QWidget):
             query = self.current_view_filter["name"]
 
             for anchor_button in self.anchor_buttons:
-                tags = anchor_button.backdrop_tags if is_backdrop_tag else anchor_button.tags
+                tags = list(anchor_button.backdrop_tags.keys()) if is_backdrop_tag else anchor_button.tags
 
                 if query in tags:
                     self.anchors_grid.addWidget(anchor_button, row_counter, column_counter)
@@ -730,13 +714,7 @@ class LabelConnector(QtGuiWidgets.QWidget):
                     anchor_button.setVisible(False)
 
             row_counter += 1
-            # add a vertical spacer, to force a resize
-            # spacer = QtGuiWidgets.QLabel(self)
-            # spacer.setFixedHeight(1)
-            # spacer.setSizePolicy(QtGuiWidgets.QSizePolicy.Expanding, QtGuiWidgets.QSizePolicy.Fixed)
-            # self.current_anchor_grid_spacers.append(spacer)
-            # self.anchors_grid.addWidget(spacer, row_counter, 0, 1, self.anchors_grid_width + 1)
-
+            
         for tag_button in self.tag_buttons:
             if tag_button.is_backdrop_tag == self.current_view_filter["is_backdrop_tag"] and tag_button.text() == self.current_view_filter["name"]:
                 tag_button.setStyleHighlighted()

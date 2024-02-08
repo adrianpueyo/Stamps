@@ -2047,7 +2047,7 @@ def getDefaultTitle(node=None):
 
 
 def backdropTags(node=None):
-    """Returns the list of words belonging to the backdrop/s label/s"""
+    """Returns a dict of words:backrop-node belonging to the backdrop/s label/s"""
     backdrops = findBackdrops(node)
     tags = dict()
     for b in backdrops:
@@ -2063,8 +2063,8 @@ def backdropTags(node=None):
             label = re.sub("[\s]+", " ", label)
             label = re.sub("\.$", "", label)
             label = label.strip()
-            if not label in tags.keys():
-                tags[label] = b
+            
+            tags[label] = b
                 
     return tags
 
