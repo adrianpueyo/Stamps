@@ -20,7 +20,7 @@ import nuke
 # 1. MAIN DEFAULTS
 # ----------------------------------------------
 
-STAMPS_SHORTCUT = "F8"
+STAMPS_SHORTCUT = "E"
 
 USE_LABELCONNECTOR_UI = True
 
@@ -163,11 +163,7 @@ def defaultTags(node):
 # ----------------------------------------------
 
 KEEP_ORIGINAL_TAGS = False  # True: Keep the default tags for the nodes, plus your custom-defined ones. False: Only keep the custom ones you can define below
-DeepExceptionClasses = [
-    "DeepToImage",
-    "DeepHoldout",
-    "DeepHoldout2",
-]  # Nodes with "Deep" in their class that don't classify as Deep.
+DeepExceptionClasses = ["DeepToImage", "DeepHoldout", "DeepHoldout2"]  # Nodes with "Deep" in their class that don't classify as Deep.
 NodeExceptionClasses = ["Viewer"]  # Nodes that won't accept stamps
 ParticleExceptionClasses = ["ParticleToImage"]  # Nodes with "Particle" in class and an input called "particles" that don't classify as particles.
 
@@ -176,22 +172,10 @@ ParticleExceptionClasses = ["ParticleToImage"]  # Nodes with "Particle" in class
 TitleIgnoreClasses = ["NoOp", "Dot", "Reformat", "DeepReformat", "Crop"]
 TagsIgnoreClasses = ["NoOp", "Dot", "Reformat", "DeepReformat", "Crop"]
 
-AnchorClassesAlt = {
-    "2D": "NoOp",
-    "Deep": "DeepExpression",
-    "3D": "EditGeo",
-    "Particle": "ParticleExpression",
-}
+AnchorClassesAlt = {"2D": "NoOp", "Deep": "DeepExpression", "3D": "EditGeo", "Particle": "ParticleExpression"}
 
 # modified for NoOp instead of PostageStamp
-StampClassesAlt = {
-    "2D": "NoOp",
-    "Deep": "DeepExpression",
-    "3D": "LookupGeo",
-    "Camera": "NoOp",
-    "Axis": "Axis",
-    "Particle": "ParticleExpression",
-}
+StampClassesAlt = {"2D": "NoOp", "Deep": "DeepExpression", "3D": "LookupGeo", "Camera": "NoOp", "Axis": "Axis", "Particle": "ParticleExpression"}
 
 # Use the dictionary above to define the base node classes you want for each type.
 # For any type you don't define, it will use a NoOp. Available types: 2D, 3D, Deep, Particle, Camera, Axis

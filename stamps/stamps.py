@@ -195,7 +195,7 @@ def wiredTagsAndBackdrops(n, updateSimilar=False):
         if not a:
             return
         a_tags = a["tags"].value().strip().strip(",")
-        a_bd = backdropTags(a)
+        a_bd = list(backdropTags(a).keys())
         an = n.knob("anchor").value()
         if updateSimilar:
             ns = [i for i in allWireds() if i.knob("anchor").value() == an]
@@ -1569,7 +1569,7 @@ class AnchorSelector(QtWidgets.QDialog):
                 # Remove leading/trailing spaces and separate by commas (with or without spaces)
                 tags = re.split(" *, *", tags_value.strip())
                 # backdrop_tags = ["$b$"+x for x in backdropTags(ni)]
-                backdrop_tags = backdropTags(ni)
+                backdrop_tags = list(backdropTags(ni))
                 for t in backdrop_tags:
                     if t not in self._backdrop_item_count:
                         self._backdrop_item_count[t] = 0
@@ -2049,7 +2049,7 @@ def getDefaultTitle(node=None):
 def backdropTags(node=None):
     """Returns the list of words belonging to the backdrop/s label/s"""
     backdrops = findBackdrops(node)
-    tags = []
+    tags = dict()
     for b in backdrops:
         if b.knob("visible_for_stamps"):
             if not b["visible_for_stamps"].value():
@@ -2063,7 +2063,9 @@ def backdropTags(node=None):
             label = re.sub("[\s]+", " ", label)
             label = re.sub("\.$", "", label)
             label = label.strip()
-            tags.append(label)
+            if not label in tags.keys():
+                tags[label] = b
+                
     return tags
 
 
