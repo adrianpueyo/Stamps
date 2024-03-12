@@ -3,3 +3,6 @@
 extras/.DS_Store
 .DS_Store
 *.dat
+.venv
+.vscode
+pyproject.toml
