@@ -611,8 +611,7 @@ class LabelConnector(QtGuiWidgets.QWidget):
             column_counter, row_counter = max_anchor_tag_columns + 1, 0
 
             for tag in sorted(self.anchorbuttons_by_backdrop_tags.keys()):
-                
-                backdrop_node = self.anchorbuttons_by_backdrop_tags[tag][0].backdrop_tags[tag] # pick the backdrop node from first anchor
+                backdrop_node = self.anchorbuttons_by_backdrop_tags[tag][0].backdrop_tags[tag]  # pick the backdrop node from first anchor
                 color_from_backdrop = rgb2hex(interface2rgb(backdrop_node["tile_color"].value()))
 
                 tag_button = TagBackdropButton(tag, color=color_from_backdrop, is_backdrop_tag=True, parent=self)
@@ -670,6 +669,9 @@ class LabelConnector(QtGuiWidgets.QWidget):
     def populate_anchors_grid(self):
         """Add the Anchor Buttons to the grid."""
 
+        # hide the main widget while we alter the grid, as each setVisible(True) call triggers a repaint
+        self.main_widget.setVisible(False)
+
         if self.current_anchor_grid_spacers:
             for spacer in self.current_anchor_grid_spacers:
                 self.anchors_grid.removeWidget(spacer)
@@ -714,12 +716,14 @@ class LabelConnector(QtGuiWidgets.QWidget):
                     anchor_button.setVisible(False)
 
             row_counter += 1
-            
+
         for tag_button in self.tag_buttons:
             if tag_button.is_backdrop_tag == self.current_view_filter["is_backdrop_tag"] and tag_button.text() == self.current_view_filter["name"]:
                 tag_button.setStyleHighlighted()
             else:
                 tag_button.setStyleDefault()
+
+        self.main_widget.setVisible(True)
 
     def add_dict_with_spacer(self, anchor_dict):
         """
@@ -866,6 +870,9 @@ class LabelConnector(QtGuiWidgets.QWidget):
         Except there is an entry selected, then just this one.
         """
 
+        # hide the main widget while we alter the grid, as each setVisible(True) call triggers a repaint
+        self.main_widget.setVisible(False)
+
         inputText = self.input.text()
 
         for button in self.anchor_buttons:
@@ -886,6 +893,8 @@ class LabelConnector(QtGuiWidgets.QWidget):
 
             for button in self.highlighted_buttons:
                 button.setStyleHighlighted()
+
+        self.main_widget.setVisible(True)
 
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key_Escape:
