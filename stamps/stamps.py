@@ -50,23 +50,56 @@ import os
 if sys.version_info[0] >= 3:
     unicode = str
 
-# PySide import switch
-try:
-    if nuke.NUKE_VERSION_MAJOR < 11:
-        from PySide import QtCore, QtGui, QtGui as QtWidgets
-        from PySide.QtCore import Qt
-    else:
-        # For Nuke 11+ (including Nuke 16+)
-        from PySide2 import QtWidgets, QtGui, QtCore
-        from PySide2.QtCore import Qt
-except ImportError:
+# PySide import switch - updated for Nuke 16 (which uses PySide6)
+qt_imported = False
+
+# First try PySide6 (used in Nuke 16)
+if not qt_imported:
     try:
-        # For environments with Qt.py installed (common in studio pipelines)
-        from Qt import QtCore, QtGui, QtWidgets
+        from PySide6 import QtWidgets, QtGui, QtCore
+        from PySide6.QtCore import Qt
+        qt_imported = True
     except ImportError:
-        # Last resort fallback for Nuke 16+
-        from PySide2 import QtWidgets, QtGui, QtCore
-        from PySide2.QtCore import Qt
+        pass
+
+# Try traditional PySide/PySide2 based on Nuke version (for compatibility with older Nuke versions)
+if not qt_imported:
+    try:
+        if nuke.NUKE_VERSION_MAJOR < 11:
+            from PySide import QtCore, QtGui, QtGui as QtWidgets
+            from PySide.QtCore import Qt
+        else:
+            from PySide2 import QtWidgets, QtGui, QtCore
+            from PySide2.QtCore import Qt
+        qt_imported = True
+    except ImportError:
+        pass
+
+# Try Qt.py abstraction layer (common in some studio environments)
+if not qt_imported:
+    try:
+        from Qt import QtCore, QtGui, QtWidgets
+        qt_imported = True
+    except ImportError:
+        pass
+
+# Try PyQt5 as final alternative
+if not qt_imported:
+    try:
+        from PyQt5 import QtWidgets, QtGui, QtCore
+        from PyQt5.QtCore import Qt
+        qt_imported = True
+    except ImportError:
+        pass
+
+# If all else fails, raise a more informative error
+if not qt_imported:
+    error_msg = (
+        "Could not import any Qt modules (PySide6, PySide2, Qt.py, PyQt5).\n"
+        "Based on testing, Nuke 16 uses PySide6, but it wasn't found in your environment.\n"
+        "Please ensure the appropriate Qt module is available in your PYTHONPATH."
+    )
+    raise ImportError(error_msg)
 
 # Import stamps_config
 # Optional: place the stamps_config.py file anywhere in your python path (i.e. in your /.nuke folder)
