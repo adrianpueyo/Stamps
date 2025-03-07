@@ -2,8 +2,8 @@
 # Stamps by Adrian Pueyo and Alexey Kuchinski
 # Smart node connection system for Nuke
 # adrianpueyo.com, 2018-2021
-version= "v1.1"
-date = "May 18 2021"
+version= "v1.2"
+date = "March 7 2025"
 #-----------------------------------------------------
 
 # Constants
@@ -28,7 +28,7 @@ TagsIgnoreClasses = ["NoOp", "Dot", "Reformat", "DeepReformat", "Crop"]
 AnchorClassColors = {"Camera":int('%02x%02x%02x%02x' % (255,255,255,1),16),}
 WiredClassColors = {"Camera":int('%02x%02x%02x%02x' % (51,0,0,1),16),}
 STAMPS_HELP = "Stamps by Adrian Pueyo and Alexey Kuchinski.\nUpdated "+date
-VERSION_TOOLTIP = "Stamps by Adrian Pueyo and Alexey Kuchinski.\nUpdated "+date+"."
+VERSION_TOOLTIP = "Stamps by Adrian Pueyo and Alexey Kuchinski.\nUpdated "+date+".\nNuke 16 compatible."
 STAMPS_SHORTCUT = "F8"
 KEEP_ORIGINAL_TAGS = True
 
@@ -56,10 +56,17 @@ try:
         from PySide import QtCore, QtGui, QtGui as QtWidgets
         from PySide.QtCore import Qt
     else:
+        # For Nuke 11+ (including Nuke 16+)
         from PySide2 import QtWidgets, QtGui, QtCore
         from PySide2.QtCore import Qt
 except ImportError:
-    from Qt import QtCore, QtGui, QtWidgets
+    try:
+        # For environments with Qt.py installed (common in studio pipelines)
+        from Qt import QtCore, QtGui, QtWidgets
+    except ImportError:
+        # Last resort fallback for Nuke 16+
+        from PySide2 import QtWidgets, QtGui, QtCore
+        from PySide2.QtCore import Qt
 
 # Import stamps_config
 # Optional: place the stamps_config.py file anywhere in your python path (i.e. in your /.nuke folder)
@@ -2287,14 +2294,13 @@ def showInGithub():
     from webbrowser import open as openUrl
     openUrl("https://github.com/adrianpueyo/stamps")
 
-
 def showHelp():
-     from webbrowser import open as openUrl
-     openUrl("http://www.adrianpueyo.com/Stamps_v1.1.pdf")
+    from webbrowser import open as openUrl
+    openUrl("http://www.adrianpueyo.com/Stamps_v1.2.pdf")
 
-def showVideo():        
-     from webbrowser import open as openUrl     
-     openUrl("https://vimeo.com/adrianpueyo/knobscripter2")
+def showVideo():
+    from webbrowser import open as openUrl
+    openUrl("https://vimeo.com/adrianpueyo/knobscripter2")
 
 def stampBuildMenus():
     global Stamps_MenusLoaded
