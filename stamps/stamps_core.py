@@ -2151,3 +2151,21 @@ def goStamp(ns=""):
                         n['matteOnly'].setValue(1)
             except Exception:
                 continue
+
+
+def createWHotboxButtons():
+    """Backward-compatible wrapper for integration hook."""
+    import integration
+    return integration.createWHotboxButtons()
+
+
+def stampBuildMenus():
+    """Backward-compatible wrapper for integration hook."""
+    import integration
+    return integration.stampBuildMenus()
+
+
+def addIncludesPath():
+    """Backward-compatible wrapper for integration hook."""
+    import integration
+    return integration.addIncludesPath()
