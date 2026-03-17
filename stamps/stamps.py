@@ -77,20 +77,14 @@ import os
 if sys.version_info[0] >= 3:
     unicode = str
 
-# PySide import switch:
-# - Use PySide6 if Nuke version is 16 or above.
-# - Use PySide2 if Nuke version is 11 or higher but below 16.
-# - Use legacy PySide if Nuke version is below 11.
+# PySide import switch.
 try:
-    if hasattr(nuke, 'NUKE_VERSION_MAJOR') and nuke.NUKE_VERSION_MAJOR >= 16:
-        from PySide6 import QtCore, QtWidgets
-    elif nuke.NUKE_VERSION_MAJOR < 11:
-        from PySide import QtCore, QtGui as QtWidgets
-    else:
-        from PySide2 import QtWidgets, QtCore
+    from PySide6 import QtWidgets, QtCore
 except ImportError:
-    # Fallback: try using the Qt.py abstraction.
-    from Qt import QtCore, QtWidgets
+    try:
+        from PySide2 import QtWidgets, QtCore
+    except ImportError:
+        from PySide import QtCore, QtGui as QtWidgets
 
 # Import optional user configuration.
 anchor_defaults = STAMP_DEFAULTS.copy()
