@@ -47,7 +47,7 @@ def defaultTitle(node):
     Customize this function to return any string you want.
     If you return None, it will calculate the default title.
     '''
-    
+
     name = node.name()
 
     # ALL THIS IS SAMPLE CODE, FEEL FREE TO REMOVE OR MODIFY IT
@@ -82,7 +82,7 @@ def defaultTags(node):
     tags = []
 
     # 2. Now we can add any custom default tags (strings) to the list, by making any calculations on the node.
-    
+
     # Here's an example:
     node_class = node.Class()
     if node_class == "Write":
