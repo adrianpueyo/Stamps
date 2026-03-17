@@ -1236,8 +1236,8 @@ class AnchorSelector(QtWidgets.QDialog):
         self.scroll_content.setLayout(self.scroll_layout)
 
         self.scroll = QtWidgets.QScrollArea()
-        self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.scroll.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
+        self.scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.scroll.setWidgetResizable(True)
         self.scroll.setWidget(self.scroll_content)
         self.scroll.setFrameStyle(QtWidgets.QFrame.Panel | QtWidgets.QFrame.Sunken)
